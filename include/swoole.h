@@ -1297,7 +1297,6 @@ static sw_inline int swSocket_is_stream(uint8_t type)
 
 void swoole_init(void);
 void swoole_clean(void);
-void swoole_update_time(void);
 double swoole_microtime(void);
 void swoole_rtrim(char *str, int len);
 void swoole_redirect_stdout(int new_fd);
@@ -1868,6 +1867,7 @@ int swChannel_pop(swChannel *object, void *out, int buffer_length);
 int swChannel_push(swChannel *object, void *in, int data_length);
 int swChannel_out(swChannel *object, void *out, int buffer_length);
 int swChannel_in(swChannel *object, void *in, int data_length);
+int swChannel_peek(swChannel *object, void *out, int buffer_length);
 int swChannel_wait(swChannel *object);
 int swChannel_notify(swChannel *object);
 void swChannel_free(swChannel *object);
@@ -2008,22 +2008,9 @@ void swTimeWheel_remove(swTimeWheel *tw, swConnection *conn);
 //Share Memory
 typedef struct
 {
-    pid_t master_pid;
-    pid_t manager_pid;
-
-    uint32_t session_round :24;
-    sw_atomic_t start;  //after swServer_start will set start=1
-
-    time_t now;
-
-    sw_atomic_t spinlock;
     swLock lock;
     swLock lock_2;
-
-    swProcessPool task_workers;
-    swProcessPool event_workers;
-
-} swServerGS;
+} SwooleGS_t;
 
 //Worker process global Variable
 typedef struct
@@ -2126,15 +2113,6 @@ typedef struct
     char *log_file;
     int trace_flags;
 
-    /**
-     *  task worker process num
-     */
-    uint16_t task_worker_num;
-    char *task_tmpdir;
-    uint16_t task_tmpdir_len;
-    uint8_t task_ipc_mode;
-    uint16_t task_max_request;
-
     uint16_t cpu_num;
 
     uint32_t pagesize;
@@ -2152,10 +2130,8 @@ typedef struct
     swMemoryPool *memory_pool;
     swReactor *main_reactor;
 
-    swPipe *task_notify;
-    swEventData *task_result;
-
-    pthread_t heartbeat_pidt;
+    char *task_tmpdir;
+    uint16_t task_tmpdir_len;
 
     char *dns_server_v4;
     char *dns_server_v6;
@@ -2168,21 +2144,10 @@ typedef struct
 
 } swServerG;
 
-typedef struct
-{
-    time_t start_time;
-    sw_atomic_t connection_num;
-    sw_atomic_t tasking_num;
-    sw_atomic_long_t accept_count;
-    sw_atomic_long_t close_count;
-    sw_atomic_long_t request_count;
-} swServerStats;
-
 extern swServerG SwooleG;              //Local Global Variable
-extern swServerGS *SwooleGS;           //Share Memory Global Variable
+extern SwooleGS_t *SwooleGS;           //Share Memory Global Variable
 extern swWorkerG SwooleWG;             //Worker Global Variable
 extern __thread swThreadG SwooleTG;   //Thread Global Variable
-extern swServerStats *SwooleStats;
 
 #define SW_CPU_NUM                    (SwooleG.cpu_num)
 

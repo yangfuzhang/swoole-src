@@ -576,6 +576,7 @@ static void php_swoole_init_globals(zend_swoole_globals *swoole_globals)
     swoole_globals->use_namespace = 1;
     swoole_globals->use_shortname = 1;
     swoole_globals->fast_serialize = 0;
+    swoole_globals->rshutdown_functions = NULL;
 }
 
 int php_swoole_length_func(swProtocol *protocol, swConnection *conn, char *data, uint32_t length)
@@ -1068,9 +1069,8 @@ PHP_MINIT_FUNCTION(swoole)
 #endif
 #endif
 
-#if PHP_MAJOR_VERSION >= 7
     swoole_serialize_init(module_number TSRMLS_DC);
-#endif
+    swoole_memory_pool_init(module_number TSRMLS_DC);
 
 #ifdef SW_USE_REDIS
     swoole_redis_init(module_number TSRMLS_CC);
@@ -1252,7 +1252,7 @@ PHP_RSHUTDOWN_FUNCTION(swoole)
         swWorker_clean();
     }
 
-    if (SwooleGS->start > 0 && SwooleG.serv && SwooleG.running > 0)
+    if (SwooleG.serv && SwooleG.serv->gs->start > 0 && SwooleG.running > 0)
     {
         if (PG(last_error_message))
         {

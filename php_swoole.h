@@ -399,10 +399,9 @@ void swoole_mmap_init(int module_number TSRMLS_DC);
 void swoole_channel_init(int module_number TSRMLS_DC);
 void swoole_ringqueue_init(int module_number TSRMLS_DC);
 void swoole_msgqueue_init(int module_number TSRMLS_DC);
-#if PHP_MAJOR_VERSION == 7
 void swoole_channel_coro_init(int module_number TSRMLS_DC);
 void swoole_serialize_init(int module_number TSRMLS_DC);
-#endif
+void swoole_memory_pool_init(int module_number TSRMLS_DC);
 
 int php_swoole_process_start(swWorker *process, zval *object TSRMLS_DC);
 
@@ -555,7 +554,7 @@ static sw_inline int php_swoole_is_callable(zval *callback TSRMLS_DC)
     sw_php_array_merge(Z_ARRVAL_P(_new_##arr), Z_ARRVAL_P(arr));\
     arr = _new_##arr;
 
-static sw_inline zval* php_swoole_read_init_property(zend_class_entry *scope, zval *object, char *p, size_t pl TSRMLS_DC)
+static sw_inline zval* php_swoole_read_init_property(zend_class_entry *scope, zval *object, const char *p, size_t pl TSRMLS_DC)
 {
     zval *property = sw_zend_read_property(scope, object, p, pl, 1 TSRMLS_CC);
     if (property == NULL || ZVAL_IS_NULL(property))
