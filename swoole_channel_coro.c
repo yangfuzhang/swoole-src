@@ -27,6 +27,11 @@ enum
     CHANNEL_CORO_PROPERTY_INDEX = 0, CHANNEL_CORO_PROPERTY_TMP_DATA = 1,
 };
 
+enum
+{
+    CHANNEL_BUFFER_MODE = 0, CHANNEL_UNBUFFER_MODE = 1,
+};
+
 enum ChannelSelectOpcode
 {
     CHANNEL_SELECT_WRITE = 0, CHANNEL_SELECT_READ = 1,
@@ -235,27 +240,28 @@ static void swoole_channel_onResume(php_context *ctx)
         }
         if (selector->opcode == CHANNEL_SELECT_WRITE)
         {
+            zval_ptr_dtor(selector->write_list);
+            Z_TRY_ADDREF_P(&selector->object);
+            add_next_index_zval(&selector->writable, &selector->object);
+            ZVAL_COPY_VALUE(selector->write_list, &selector->writable);
+            if (selector->read_list)
+            {
+                zval_ptr_dtor(selector->read_list);
+                ZVAL_COPY_VALUE(selector->read_list, &selector->readable);
+            }
+        }
+        else
+        {
+            //read
             zval_ptr_dtor(selector->read_list);
             Z_TRY_ADDREF_P(&selector->object);
             add_next_index_zval(&selector->readable, &selector->object);
-
             ZVAL_COPY_VALUE(selector->read_list, &selector->readable);
-
             if (selector->write_list)
             {
                 zval_ptr_dtor(selector->write_list);
                 ZVAL_COPY_VALUE(selector->write_list, &selector->writable);
             }
-        }
-        else
-        {
-            zval_ptr_dtor(selector->read_list);
-            ZVAL_COPY_VALUE(selector->read_list, &selector->readable);
-
-            zval_ptr_dtor(selector->write_list);
-            Z_TRY_ADDREF_P(&selector->object);
-            add_next_index_zval(&selector->writable, &selector->object);
-            ZVAL_COPY_VALUE(selector->write_list, &selector->writable);
         }
         SW_MAKE_STD_ZVAL(zdata);
         ZVAL_BOOL(zdata, 1);
@@ -289,7 +295,7 @@ static int swoole_channel_try_resume_consumer(zval *object, channel_coro_propert
         if (next->selector)
         {
             next->selector->object = *object;
-            next->selector->opcode = CHANNEL_SELECT_WRITE;
+            next->selector->opcode = CHANNEL_SELECT_READ;
             channel_selector_clear(next->selector, node);
         }
         swLinkedList_shift(coro_list);
@@ -329,45 +335,6 @@ static int swoole_channel_try_resume_producer(zval *object, channel_coro_propert
         return 0;
     }
     return -1;
-}
-
-static void try_resume_producer_defer(zval *object, channel_coro_property *property, swChannel *chan)
-{
-    swLinkedList *coro_list = property->producer_list;
-    swLinkedList_node *node;
-    channel_node *next;
-
-    if (coro_list->num != 0)
-    {
-        node = coro_list->head;
-        next = (channel_node *)node->data;
-        next->context.onTimeout = swoole_channel_onResume;
-        if (next->selector)
-        {
-            next->selector->object = *object;
-            next->selector->opcode = CHANNEL_SELECT_WRITE;
-            channel_selector_clear(next->selector, node);
-        }
-        else
-        {
-            zval *zdata = &next->context.coro_params;
-            Z_TRY_ADDREF_P(zdata);
-            ZVAL_TRUE(zdata);
-            if (swChannel_in(chan, zdata, sizeof(zval)) < 0)
-            {
-                ZVAL_FALSE(zdata);
-            }
-            else
-            {
-                Z_TRY_ADDREF_P(zdata);
-                ZVAL_TRUE(zdata);
-            }
-            Z_TRY_ADDREF_P(zdata);
-            ZVAL_TRUE(zdata);
-        }
-        swLinkedList_shift(coro_list);
-        channel_notify(next);
-    }
 }
 
 static sw_inline int swoole_channel_try_resume_all(zval *object, channel_coro_property *property)
@@ -495,7 +462,7 @@ static PHP_METHOD(swoole_channel_coro, push)
     }
     chan = swoole_get_object(getThis());
 
-    if (get_channel_type(property, 0) > 0)
+    if (get_channel_type(property, CHANNEL_BUFFER_MODE) > 0)
     {
         swoole_channel_try_resume_consumer(getThis(), property, zdata);
         APPEND_YIELD(producer_list, *zdata);
@@ -525,7 +492,7 @@ static PHP_METHOD(swoole_channel_coro, pop)
 
     channel_coro_property *property = swoole_get_property(getThis(), CHANNEL_CORO_PROPERTY_INDEX);
 
-    if (get_channel_type(property, 1) > 0)
+    if (get_channel_type(property, CHANNEL_UNBUFFER_MODE) > 0)
     {
         ret = swoole_channel_try_resume_producer(getThis(), property, &zdata);
         if (ret == 0)
@@ -609,12 +576,13 @@ static PHP_METHOD(swoole_channel_coro, select)
     zend_bool need_yield = 1;
     swChannel *chan = NULL;
     channel_coro_property *property = NULL;
+    int type;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "a!a!d", &read_list, &write_list, &timeout) == FAILURE)
     {
         RETURN_FALSE;
     }
-
+    type  = get_channel_type(property, CHANNEL_UNBUFFER_MODE);
     if (read_list)
     {
         array_init(&readable);
@@ -626,21 +594,13 @@ static PHP_METHOD(swoole_channel_coro, select)
                 return;
             }
             chan = swoole_get_object(item);
-            if (chan != NULL && chan->num > 0)
+            property = swoole_get_property(item, CHANNEL_CORO_PROPERTY_INDEX);
+            if ((type == CHANNEL_BUFFER_MODE && chan->num > 0)
+                    || (type == CHANNEL_UNBUFFER_MODE && property->producer_list->num > 0))
             {
                 Z_ADDREF_P(item);
                 add_next_index_zval(&readable, item);
                 need_yield = 0;
-            }
-            else if (chan == NULL)
-            {
-                property = swoole_get_property(item, CHANNEL_CORO_PROPERTY_INDEX);
-                if (property->producer_list->num > 0)
-                {
-                    Z_ADDREF_P(item);
-                    add_next_index_zval(&readable, item);
-                    need_yield = 0;
-                }
             }
         SW_HASHTABLE_FOREACH_END();
     }
@@ -656,21 +616,13 @@ static PHP_METHOD(swoole_channel_coro, select)
                 return;
             }
             chan = swoole_get_object(item);
-            if (chan != NULL && chan->num < chan->max_num)
+            property = swoole_get_property(item, CHANNEL_CORO_PROPERTY_INDEX);
+            if ((type == CHANNEL_BUFFER_MODE && chan->num < chan->max_num)
+                    || (type == CHANNEL_UNBUFFER_MODE && property->consumer_list->num > 0))
             {
                 Z_ADDREF_P(item);
                 add_next_index_zval(&writable, item);
                 need_yield = 0;
-            }
-            else if (chan == NULL)
-            {
-                property = swoole_get_property(item, CHANNEL_CORO_PROPERTY_INDEX);
-                if (property->consumer_list->num > 0)
-                {
-                    Z_ADDREF_P(item);
-                    add_next_index_zval(&writable, item);
-                    need_yield = 0;
-                }
             }
         SW_HASHTABLE_FOREACH_END();
     }
@@ -693,9 +645,6 @@ static PHP_METHOD(swoole_channel_coro, select)
         channel_node *node = emalloc(sizeof(channel_node));
         memset(node, 0, sizeof(channel_node));
         node->selector = selector;
-
-        get_channel_type(property, 1);
-
         if (read_list)
         {
             selector->read_list = read_list;
