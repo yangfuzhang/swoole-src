@@ -136,6 +136,15 @@ void coro_destroy(TSRMLS_D);
 #define coro_resume_parent(sw_current_context, retval, coro_retval) \
         sw_coro_resume_parent(sw_current_context, retval, coro_retval)
 
+static inline int sw_get_current_uid()
+{
+    if (unlikely(COROG.current_coro == NULL))
+    {
+        return -1;
+    }
+    return COROG.current_coro->cid;
+}
+
 int sw_coro_create(zend_fcall_info_cache *op_array, zval **argv, int argc, zval *retval, void *post_callback, void *param);
 php_context *sw_coro_save(zval *return_value, php_context *sw_php_context);
 int sw_coro_resume(php_context *sw_current_context, zval *retval, zval *coro_retval);
