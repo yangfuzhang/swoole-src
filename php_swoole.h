@@ -52,7 +52,7 @@
 
 BEGIN_EXTERN_C()
 
-#define PHP_SWOOLE_VERSION  "2.2.1"
+#define PHP_SWOOLE_VERSION  "4.0.0-beta"
 #define PHP_SWOOLE_CHECK_CALLBACK
 #define PHP_SWOOLE_ENABLE_FASTCALL
 #define PHP_SWOOLE_CLIENT_USE_POLL
@@ -126,12 +126,8 @@ extern swoole_object_array swoole_objects;
 #endif
 
 #ifdef SW_SOCKETS
-#if PHP_VERSION_ID >= 50301 && (HAVE_SOCKETS || defined(COMPILE_DL_SOCKETS))
 #include "ext/sockets/php_sockets.h"
 #define SWOOLE_SOCKETS_SUPPORT
-#else
-#error "Enable sockets support, require sockets extension."
-#endif
 #endif
 
 #ifdef SW_USE_HTTP2
@@ -140,8 +136,8 @@ extern swoole_object_array swoole_objects;
 #endif
 #endif
 
-#if PHP_MAJOR_VERSION < 7
-#error "require PHP version 7.0 or later."
+#if PHP_MAJOR_VERSION < 7 || (PHP_MAJOR_VERSION > 7 || PHP_MINOR_VERSION == 0)
+#error "require PHP version 7.1 or later."
 #endif
 
 #include "php7_wrapper.h"
@@ -217,11 +213,15 @@ enum php_swoole_fd_type
     PHP_SWOOLE_FD_DGRAM_CLIENT = SW_FD_DGRAM_CLIENT,
     PHP_SWOOLE_FD_MYSQL,
     PHP_SWOOLE_FD_REDIS,
-    PHP_SWOOLE_FD_POSTGRESQL,
     PHP_SWOOLE_FD_HTTPCLIENT,
     PHP_SWOOLE_FD_PROCESS_STREAM,
+#ifdef SW_COROUTINE
+    PHP_SWOOLE_FD_MYSQL_CORO,
+    PHP_SWOOLE_FD_REDIS_CORO,
+    PHP_SWOOLE_FD_POSTGRESQL,
     PHP_SWOOLE_FD_SOCKET,
     PHP_SWOOLE_FD_CHAN_PIPE,
+#endif
 };
 //---------------------------------------------------------
 typedef enum
@@ -373,6 +373,9 @@ void swoole_destory_table(zend_resource *rsrc TSRMLS_DC);
 void swoole_server_port_init(int module_number TSRMLS_DC);
 void swoole_async_init(int module_number TSRMLS_DC);
 void swoole_table_init(int module_number TSRMLS_DC);
+#ifdef SW_USE_PHPX
+void swoole_runtime_init(int module_number TSRMLS_DC);
+#endif
 void swoole_lock_init(int module_number TSRMLS_DC);
 void swoole_atomic_init(int module_number TSRMLS_DC);
 void swoole_client_init(int module_number TSRMLS_DC);

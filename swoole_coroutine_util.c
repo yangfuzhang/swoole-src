@@ -1010,7 +1010,6 @@ static PHP_METHOD(swoole_coroutine_util, fread)
 
     if (!SwooleAIO.init)
     {
-        SwooleAIO.mode = SW_AIO_BASE;
         php_swoole_check_reactor();
         swAio_init();
     }
@@ -1080,7 +1079,6 @@ static PHP_METHOD(swoole_coroutine_util, fgets)
 
     if (!SwooleAIO.init)
     {
-        SwooleAIO.mode = SW_AIO_BASE;
         php_swoole_check_reactor();
         swAio_init();
     }
@@ -1153,11 +1151,6 @@ static PHP_METHOD(swoole_coroutine_util, fwrite)
     ev.fd = fd;
     ev.offset = _seek;
 
-    if (SwooleAIO.mode == SW_AIO_LINUX)
-    {
-        SwooleAIO.mode = SW_AIO_BASE;
-        SwooleAIO.init = 0;
-    }
     php_swoole_check_aio();
 
     swTrace("fd=%d, offset=%ld, length=%ld", fd, ev.offset, ev.nbytes);
@@ -1206,7 +1199,6 @@ static PHP_METHOD(swoole_coroutine_util, readFile)
 
     if (!SwooleAIO.init)
     {
-        SwooleAIO.mode = SW_AIO_BASE;
         php_swoole_check_reactor();
         swAio_init();
     }
@@ -1276,7 +1268,6 @@ static PHP_METHOD(swoole_coroutine_util, writeFile)
 
     if (!SwooleAIO.init)
     {
-        SwooleAIO.mode = SW_AIO_BASE;
         php_swoole_check_reactor();
         swAio_init();
     }
@@ -1440,11 +1431,6 @@ static PHP_METHOD(swoole_coroutine_util, gethostbyname)
     ev.object = sw_current_context;
     ev.callback = coro_dns_onResolveCompleted;
 
-    if (SwooleAIO.mode == SW_AIO_LINUX)
-    {
-        SwooleAIO.mode = SW_AIO_BASE;
-        SwooleAIO.init = 0;
-    }
     php_swoole_check_aio();
 
     if (swAio_dispatch(&ev) < 0)
@@ -1519,11 +1505,6 @@ static PHP_METHOD(swoole_coroutine_util, getaddrinfo)
         req->result = ecalloc(SW_DNS_HOST_BUFFER_SIZE, sizeof(struct sockaddr_in6));
     }
 
-    if (SwooleAIO.mode == SW_AIO_LINUX)
-    {
-        SwooleAIO.mode = SW_AIO_BASE;
-        SwooleAIO.init = 0;
-    }
     php_swoole_check_aio();
 
     if (swAio_dispatch(&ev) < 0)
