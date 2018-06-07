@@ -24,16 +24,6 @@
 #include "coroutine.h"
 #include <setjmp.h>
 
-#define DEFAULT_MAX_CORO_NUM 3000
-#define DEFAULT_STACK_SIZE   8192
-#define MAX_CORO_NUM_LIMIT   0x80000
-
-#define CORO_END 0
-#define CORO_YIELD 1
-#define CORO_LIMIT 2
-#define CORO_SAVE 3
-
-
 #define SW_EX_CV_NUM(ex, n) (((zval ***)(((char *)(ex)) + ZEND_MM_ALIGNED_SIZE(sizeof(zend_execute_data)))) + n)
 #define SW_EX_CV(var) (*SW_EX_CV_NUM(execute_data, var))
 
@@ -136,7 +126,7 @@ void coro_destroy(TSRMLS_D);
 #define coro_resume_parent(sw_current_context, retval, coro_retval) \
         sw_coro_resume_parent(sw_current_context, retval, coro_retval)
 
-static inline int sw_get_current_uid()
+static inline int sw_get_current_cid()
 {
     if (unlikely(COROG.current_coro == NULL))
     {

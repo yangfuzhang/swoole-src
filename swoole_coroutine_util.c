@@ -747,7 +747,7 @@ static PHP_METHOD(swoole_coroutine_util, resume)
 
 static PHP_METHOD(swoole_coroutine_util, getuid)
 {
-    RETURN_LONG(sw_get_current_uid());
+    RETURN_LONG(sw_get_current_cid());
 }
 
 static void php_coroutine_sleep_timeout(swTimer *timer, swTimer_node *tnode)
