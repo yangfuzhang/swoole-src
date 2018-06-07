@@ -1690,17 +1690,7 @@ void php_swoole_onClose(swServer *serv, swDataHead *info)
         return;
     }
 
-    php_context *ctx = emalloc(sizeof(php_context));
-    zval _return_value;
-    zval *return_value = &_return_value;
-
-    coro_save(ctx);
-    int required = COROG.require;
     int ret = coro_create(cache, args, 3, &retval, NULL, NULL);
-    coro_resume_parent(ctx, retval, retval);
-    COROG.require = required;
-    efree(ctx);
-
     sw_zval_ptr_dtor(&zfd);
     sw_zval_ptr_dtor(&zfrom_id);
 
@@ -2185,11 +2175,11 @@ PHP_METHOD(swoole_server, set)
         COROG.max_coro_num = (int) Z_LVAL_P(v);
         if (COROG.max_coro_num <= 0)
         {
-            COROG.max_coro_num = DEFAULT_MAX_CORO_NUM;
+            COROG.max_coro_num = SW_DEFAULT_MAX_CORO_NUM;
         }
-        else if (COROG.max_coro_num >= MAX_CORO_NUM_LIMIT)
+        else if (COROG.max_coro_num >= SW_MAX_CORO_NUM_LIMIT)
         {
-            COROG.max_coro_num = MAX_CORO_NUM_LIMIT;
+            COROG.max_coro_num = SW_MAX_CORO_NUM_LIMIT;
         }
     }
     if (php_swoole_array_get_value(vht, "send_yield", v))

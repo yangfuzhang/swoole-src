@@ -1057,7 +1057,7 @@ PHP_MINIT_FUNCTION(swoole)
     swoole_mysql_init(module_number TSRMLS_CC);
     swoole_mmap_init(module_number TSRMLS_CC);
     swoole_channel_init(module_number TSRMLS_CC);
-#if PHP_MAJOR_VERSION >= 7
+#ifdef SW_COROUTINE
     swoole_channel_coro_init(module_number TSRMLS_CC);
 #endif
     swoole_ringqueue_init(module_number TSRMLS_CC);
@@ -1133,6 +1133,12 @@ PHP_MINFO_FUNCTION(swoole)
 
 #ifdef SW_COROUTINE
     php_info_print_table_row(2, "coroutine", "enabled");
+#endif
+#if USE_BOOST_CONTEXT
+    php_info_print_table_row(2, "boost.context", "enabled");
+#endif
+#if USE_UCONTEXT
+    php_info_print_table_row(2, "ucontext", "enabled");
 #endif
 #ifdef HAVE_EPOLL
     php_info_print_table_row(2, "epoll", "enabled");
