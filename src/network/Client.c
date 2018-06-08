@@ -798,6 +798,7 @@ static int swClient_tcp_pipe(swClient *cli, int write_fd, int flags)
 static int swClient_tcp_send_async(swClient *cli, char *data, int length, int flags)
 {
     int n = length;
+    swDebug("socket#%d send data: %*s", cli->socket->fd, length, data);
     if (cli->reactor->write(cli->reactor, cli->socket->fd, data, length) < 0)
     {
         if (SwooleG.error == SW_ERROR_OUTPUT_BUFFER_OVERFLOW)

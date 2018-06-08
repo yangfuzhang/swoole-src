@@ -62,7 +62,7 @@ static sw_inline int swProtocol_split_package_by_eof(swProtocol *protocol, swCon
         eof_pos = swoole_strnpos(buffer->str + buffer->offset, buffer->length - buffer->offset, protocol->package_eof, protocol->package_eof_len);
     }
 
-    swTraceLog(SW_TRACE_EOF_PROTOCOL, "#[0] count=%d, length=%ld, size=%ld, offset=%ld.", count, buffer->length, buffer->size, buffer->offset);
+    swTraceLog(SW_TRACE_EOF_PROTOCOL, "#[0] socket=%d, count=%d, length=%ld, size=%ld, offset=%ld.", conn->fd, count, buffer->length, buffer->size, buffer->offset);
 
     //waiting for more data
     if (eof_pos < 0)
@@ -72,7 +72,7 @@ static sw_inline int swProtocol_split_package_by_eof(swProtocol *protocol, swCon
     }
 
     uint32_t length = buffer->offset + eof_pos + protocol->package_eof_len;
-    swTraceLog(SW_TRACE_EOF_PROTOCOL, "#[4] count=%d, length=%d", count, length);
+    swTraceLog(SW_TRACE_EOF_PROTOCOL, "#[4] socket=%d, count=%d, length=%d", conn->fd, count, length);
     if (protocol->onPackage(conn, buffer->str, length) < 0)
     {
         return SW_ERR;
@@ -87,7 +87,7 @@ static sw_inline int swProtocol_split_package_by_eof(swProtocol *protocol, swCon
     {
         uint32_t remaining_length = buffer->length - length;
         char *remaining_data = buffer->str + length;
-        swTraceLog(SW_TRACE_EOF_PROTOCOL, "#[5] count=%d, remaining_length=%d", count, remaining_length);
+        swTraceLog(SW_TRACE_EOF_PROTOCOL, "#[5] socket=%d, count=%d, remaining_length=%d", conn->fd, count, remaining_length);
 
         while (1)
         {
@@ -299,6 +299,9 @@ int swProtocol_recv_check_eof(swProtocol *protocol, swConnection *conn, swString
     }
     else
     {
+        swDebug("recv[%d]: %*s", conn->fd, n, buf_ptr);
+        swTraceLog(SW_TRACE_EOF_PROTOCOL, "recv %d bytes from socket#%d.", n, conn->fd);
+
         buffer->length += n;
 
         if (buffer->length < protocol->package_eof_len)

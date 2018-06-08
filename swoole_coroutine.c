@@ -474,6 +474,8 @@ int sw_coro_resume(php_context *sw_current_context, zval *retval, zval **coro_re
 #else
 int sw_coro_resume(php_context *sw_current_context, zval *retval, zval *coro_retval)
 {
+    swTraceLog(SW_TRACE_COROUTINE, "resume coroutine.");
+
     EG(vm_stack) = SWCC(current_vm_stack);
     EG(vm_stack_top) = SWCC(current_vm_stack_top);
     EG(vm_stack_end) = SWCC(current_vm_stack_end);
@@ -546,6 +548,9 @@ void coro_yield()
     EG(argument_stack) = COROG.origin_vm_stack;
     EG(current_execute_data) = COROG.origin_ex;
 #endif
+
+    swTraceLog(SW_TRACE_COROUTINE, "yield coroutine.");
+
     longjmp(*swReactorCheckPoint, 1);
 }
 
