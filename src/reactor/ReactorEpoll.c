@@ -251,6 +251,7 @@ static int swReactorEpoll_wait(swReactor *reactor, struct timeval *timeo)
             //read
             if ((events[i].events & EPOLLIN) && !event.socket->removed)
             {
+                swTraceLog(SW_TRACE_EVENT, "readable event, socket=%d", event.fd);
                 handle = swReactor_getHandle(reactor, SW_EVENT_READ, event.type);
                 ret = handle(reactor, &event);
                 if (ret < 0)
@@ -261,6 +262,7 @@ static int swReactorEpoll_wait(swReactor *reactor, struct timeval *timeo)
             //write
             if ((events[i].events & EPOLLOUT) && !event.socket->removed)
             {
+                swTraceLog(SW_TRACE_EVENT, "writable event, socket=%d", event.fd);
                 handle = swReactor_getHandle(reactor, SW_EVENT_WRITE, event.type);
                 ret = handle(reactor, &event);
                 if (ret < 0)
